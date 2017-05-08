@@ -1,11 +1,16 @@
 """
-input vertical-horizontal
-search in piece
+TODO: Change input to letters-numbers
+
+search in pieces
 if piece has that location
-board with that location -> x
+Board.board with that location -> x
 if not -> o
-pieces player 1
-pieces player 2
+
+1x Aircraft Carrier 5
+1x Battleship 4
+1x Cruiser 3
+2x Destroyer 2
+2x Submarine 1
 """
 
 from baseboard import Piece, Board, Player
@@ -57,7 +62,8 @@ one.num_o_pieces = 99
 
 board = BattleshipBoard()
 
-destroyer1 = BattleshipPiece( ((5,6), (6,6)), "Destroyer", comp)
+destroyer1 = BattleshipPiece( ((5,5), (6,5)), "Destroyer", comp)
+destroyer2 = BattleshipPiece( ((0,0), (0,1)), "Destroyer", comp)
 
 board.create_piece(destroyer1)
 
@@ -65,7 +71,6 @@ print(board)
 inp = None
 
 while inp != "x":
-    print("Ship's hitpoint:", destroyer1.hp)
     inp = input("> ")
     if inp == "x" or inp == "exit":
         break
