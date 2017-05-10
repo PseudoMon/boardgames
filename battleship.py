@@ -20,6 +20,10 @@ class BattleshipBoard(Board):
     def __init__(self, pieces=[]):
         Board.__init__(self, (10, 10), pieces)
         
+    def create_piece(self, piece):
+        # Overloading the default
+        self.pieces.append(piece)
+        
     def findpiece(self, pos):
         nopiece = True
         
@@ -34,7 +38,7 @@ class BattleshipBoard(Board):
         
 class BattleshipPiece(Piece):
     def __init__(self, range, name, player):
-        # range is a tuple containing tuples
+        # range is a list containing tuples
         Piece.__init__(self, range[0], player)
         
         self.hp = len(range)
@@ -54,17 +58,105 @@ class BattleshipPlayer(Player):
     def __init__(self, ord):
         Player.__init__(self, ord)
         
+def putpiece(chosen, board):
+    print("Where to put?")
+    inp = input("> ")
+    startpos = inputtopos(inp)
+    
+    if startpos == False:
+        return False
+    
+    print("Extending to? (up/down/left/right)")
+    inp = input("> ")
+    
+    if inp in ("up", "down", "left", "right"):
+        chosen.range = [startpos]
+        toofar = {
+            'up': startpos[0] - (chosen.hp - 1) < 0,
+            'down': startpos[0] + (chosen.hp - 1) < 0,
+            'left': startpos[1] - (chosen.hp - 1) < 0,
+            'right': startpos[1] + (chosen.hp - 1) < 0
+            }
+        
+        if toofar[inp]
+            print("Dood, ye can't go that way")
+            
+        else:
+            conflict = False
+            for x in range(1,chosen.hp):
+                if inp == "up":
+                    pos = (startpos[0]-x, startpos[1])
+                elif inp == "down":
+                    pos = (startpos[0]+x, startpos[1])
+                elif inp == "left":
+                    pos = (startpos[1]-x, startpos[1])
+                elif inp == "right":
+                    pos = (startpos[1]+x, startpos[1])
+                
+                if board.findpiece(pos):
+                    print("There's already another ship that way.")
+                    break
+                    
+                else:
+                    chosen.range.append( (startpos[0]-x, startpos[1]) )
+                    
+            if not conflict:
+                board.create_piece(chosen)
+                
+    else:
+        return False
+        
+    return True
+        
 comp = Player(0)        
 one = Player(1)
 players = [comp, one]
 comp.num_o_pieces = 1
-one.num_o_pieces = 99
+one.num_o_pieces = 3
 
 board = BattleshipBoard()
 
-destroyer1 = BattleshipPiece( ((5,5), (6,5)), "Destroyer", comp)
-destroyer2 = BattleshipPiece( ((0,0), (0,1)), "Destroyer", comp)
+destroyer1 = BattleshipPiece( 
+    [(0,0), (0,1)], 
+    "Destroyer", 
+    one )
+destroyer2 = BattleshipPiece(
+    [(0,0), (0,1)], 
+    "Destroyer", 
+    one )
+carrier = BattleshipPiece( 
+    [(0,0), (0,1), (0,2), (0,3), (0,4)],
+    "Aircraft Carrier",
+    one )
+    
+ships = { 'Destroyer': [destroyer1, destroyer2], 'Carrier': [carrier] } 
 
+inp = None
+print(board)
+    
+while inp != "x":
+    for ship in ships:
+        print("{}x {} (size {})".format(len(ships[ship]), ship, ships[ship][0].hp))
+        
+    inp = input("> ")
+    if inp in ships:
+        try:
+            chosen = ships[inp].pop()
+        except IndexError:
+            print("There's no more ship of that type!")
+        else:
+            if putpiece(chosen, board):
+                if len(ships[inp]) == 0:
+                    del ships[inp]
+            else:
+                ships[inp].append(chosen)
+    else:
+        print("?")
+            
+
+    
+    
+""" Attacking test
 board.create_piece(destroyer1)
 
 print(board)
@@ -95,7 +187,7 @@ while inp != "x":
     
 print(board)
 print("Player wins!")
-
+"""
 
 
 

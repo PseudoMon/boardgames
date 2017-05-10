@@ -48,7 +48,21 @@ class Board:
         return boardstr
         
     def create_piece(self, piece):
-        self.pieces.append(piece)
+        """ By default, different pieces can't share 
+        the same position. 
+        This function checks that there's no piece with the
+        same position before adding it. """
+        
+        conflict = False
+        for i in self.pieces:
+            if i.row == piece.row and i.col == piece.col:
+                conflict = True
+                
+        if conflict: 
+            print("There's already a piece in that position!")
+        
+        if not conflict:
+            self.pieces.append(piece)
         return
     
     def set_piece(self, piece):
@@ -130,8 +144,8 @@ def inputtopos(inp):
         pos = ( int(inp[0]), int(inp[1]) )
     except (IndexError, ValueError):
         print("Input error!")
-        
-    return pos
+    else:    
+        return pos
     
     
 def checkwin(players):
