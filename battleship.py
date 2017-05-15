@@ -22,7 +22,7 @@ class BattleshipBoard(Board):
         Board.__init__(self, (10, 10), pieces)
         
     def create_piece(self, piece):
-        # Overloading the default
+        # Overloading the default, simply because Battleship doesn't use the typical row-col positioning
         self.pieces.append(piece)
         
     def findpiece(self, pos):
@@ -47,9 +47,9 @@ class BattleshipBoard(Board):
             for col in range(0,self.size[1]):
                 self.board[row][col] = "."
                 
-    def putpiece(self, chosen, auto = False, startpos=None, going=None):
-        # startpos and going None means it's player's action
-        # if the values are given, then it's automated
+    def set_piece(self, chosen, auto = False, startpos=None, going=None):
+        # Overloading the default, Battleship piece-setting
+        # is a bit more complicated
         if not auto:
             print("Where to put?")
             inp = input("> ")
@@ -128,10 +128,46 @@ class BattleshipPiece(Piece):
             
         return
         
+class Destroyer(BattleshipPiece):
+    def __init__(self, owner):
+        BattleshipPiece.__init__(self,
+            [(0,0), (0,1)], 
+            "Destroyer", 
+            owner ) 
+            
+class Submarine(BattleshipPiece):
+    def __init__(self, owner):
+        BattleshipPiece.__init__(self,
+            [(0,0)],
+            "Submarine",
+            owner )
+            
+class Carrier(BattleshipPiece):
+    def __init__(self, owner):
+        BattleshipPiece.__init__(self,
+            [(0,0), (0,1), (0,2), (0,3), (0,4)],
+            "Carrier",
+            owner ) 
+            
+class Battleshipship(BattleshipPiece):
+    def __init__(self, owner):
+        BattleshipPiece.__init__(self,
+            [(0,0), (0,1), (0,2), (0,3)],
+            "Battleship",
+            owner ) 
+            
+class Cruiser(BattleshipPiece):
+    def __init__(self, owner):
+        BattleshipPiece.__init__(self,
+            [(0,0), (0,1), (0,2)],
+            "Cruiser",
+            owner )         
+        
 class BattleshipPlayer(Player):
     def __init__(self, ord):
         Player.__init__(self, ord)
         
+
 def position_ships(ships, board):
     inp = None
     while inp != "x":
@@ -146,7 +182,7 @@ def position_ships(ships, board):
             except IndexError:
                 print("There's no more ship of that type!")
             else:
-                if board.putpiece(chosen):
+                if board.set_piece(chosen):
                     if len(ships[inp]) == 0:
                         del ships[inp]
                 else:
@@ -171,89 +207,75 @@ def position_ships_random(ships, board):
                 startpos = (randint(0, 9), randint(0,9))
                 going = directions[randint(0,3)]
        
-                placed = board.putpiece(chosen, True, startpos, going)
+                placed = board.set_piece(chosen, True, startpos, going)
                 
-            board.make_visible()
-    print(board)
+    #board.make_visible()
+    #print(board)
+    
+def attack_prompt(oppboard, cur_player):
+    print("It's now {}'s turn".format(cur_player))
+    done = False
+    while not done:
+        print("Check which tile?")
+        inp = input("> ")
+        
+        if inp == "x" or inp == "exit":
+            exit()
+            
+        pos = inputtopos(inp)
+        
+        if pos:
+            if oppboard.board[pos[0]][pos[1]] != ".":
+                print("You've already checked that tile!")
+                
+            else:
+                hit = oppboard.findpiece(pos)
+                
+                if not hit:
+                    oppboard.board[pos[0]][pos[1]] = "o"
+                    
+                else:
+                    print("You hit something!")
+                    hit.attacked()
+                    oppboard.board[pos[0]][pos[1]] = "x"
+                    
+                done = True
     
         
 comp = Player(0)        
 one = Player(1)
 players = [comp, one]
-comp.num_o_pieces = 1
-one.num_o_pieces = 3
+comp.num_o_pieces = 7
+one.num_o_pieces = 99
 
-yourboard = BattleshipBoard()
+compboard = BattleshipBoard()
 
-destroyer1 = BattleshipPiece( 
-    [(0,0), (0,1)], 
-    "Destroyer", 
-    one )
-destroyer2 = BattleshipPiece(
-    [(0,0), (0,1)], 
-    "Destroyer", 
-    one )
-submarine1 = BattleshipPiece(
-    [(0,0)],
-    "Submarine",
-    one )
-submarine2 = BattleshipPiece(
-    [(0,0)],
-    "Submarine",
-    one )
-carrier = BattleshipPiece( 
-    [(0,0), (0,1), (0,2), (0,3), (0,4)],
-    "Carrier",
-    one )
-battleship = BattleshipPiece(
-    [(0,0), (0,1), (0,2), (0,3)],
-    "Battleship",
-    one )
-cruiser = BattleshipPiece(
-    [(0,0), (0,1), (0,2)],
-    "Cruiser",
-    one )
+destroyer1 = Destroyer(comp)
+destroyer2 = Destroyer(comp)
+submarine1 = Submarine(comp)
+submarine2 = Submarine(comp)
+carrier = Carrier(comp)
+battleship = Battleshipship(comp)
+cruiser = Cruiser(comp)
 
 ships = { 'destroyer': [destroyer1, destroyer2], 'carrier': [carrier], 'submarine': [submarine1, submarine2], 'battleship': [battleship], 'cruiser': [cruiser] } 
 
-print(yourboard)
-position_ships_random(ships, yourboard)
-yourboard.make_invisible()
-print(yourboard)
+print(compboard)
+position_ships_random(ships, compboard)
 
 
-""" Attacking test
-board.create_piece(destroyer1)
-
-print(board)
-inp = None
-
-while inp != "x":
-    inp = input("> ")
-    if inp == "x" or inp == "exit":
+""" Attacking test """
+cur_player = 1
+while True:
+    attack_prompt(compboard, cur_player)
+    print(compboard)
+    winner = checkwin(players)
+    if winner:
         break
-        
-    pos = inputtopos(inp)
-    hit = board.findpiece(pos)
     
-    if not hit:
-        board.board[pos[0]][pos[1]] = "o"
-        
-    else:
-        print("You hit something!")
-        hit.attacked()
-        board.board[pos[0]][pos[1]] = "x"
-        
-        winner = checkwin(players)
-        
-        if winner:
-            break
-            
-    print(board)
-    
-print(board)
+print(compboard)
 print("Player wins!")
-"""
+
 
 
 
