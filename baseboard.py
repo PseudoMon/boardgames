@@ -22,6 +22,7 @@ class Piece:
         
 class Board:
     def __init__(self, size, pieces=[]):
+        # Size should be a tuple of rows and columns
         self.board = [["." for x in range(size[0])] for y in range(size[1])]
         self.size = size
         self.pieces = pieces
@@ -144,6 +145,7 @@ def inputtopos(inp):
         pos = ( int(inp[0]), int(inp[1]) )
     except (IndexError, ValueError):
         print("Input error!")
+        return False
     else:    
         return pos
     

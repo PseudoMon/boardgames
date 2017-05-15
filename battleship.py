@@ -35,6 +35,12 @@ class BattleshipBoard(Board):
                 
         if nopiece:
             return False
+            
+    def make_visible(self):
+        for piece in self.pieces:
+            for mass in piece.range:
+                self.board[mass[0]][mass[1]] = "x"
+                
         
 class BattleshipPiece(Piece):
     def __init__(self, range, name, player):
@@ -65,6 +71,10 @@ def putpiece(chosen, board):
     
     if startpos == False:
         return False
+        
+    if board.findpiece(startpos):
+        print("There's already another ship there.")
+        return False
     
     print("Extending to? (up/down/left/right)")
     inp = input("> ")
@@ -73,35 +83,34 @@ def putpiece(chosen, board):
         chosen.range = [startpos]
         toofar = {
             'up': startpos[0] - (chosen.hp - 1) < 0,
-            'down': startpos[0] + (chosen.hp - 1) < 0,
+            'down': startpos[0] + (chosen.hp - 1) > board.size[0],
             'left': startpos[1] - (chosen.hp - 1) < 0,
-            'right': startpos[1] + (chosen.hp - 1) < 0
+            'right': startpos[1] + (chosen.hp - 1) > board.size[1]
             }
         
-        if toofar[inp]
+        if toofar[inp]:
             print("Dood, ye can't go that way")
+            return False
             
         else:
-            conflict = False
             for x in range(1,chosen.hp):
                 if inp == "up":
                     pos = (startpos[0]-x, startpos[1])
                 elif inp == "down":
                     pos = (startpos[0]+x, startpos[1])
                 elif inp == "left":
-                    pos = (startpos[1]-x, startpos[1])
+                    pos = (startpos[0], startpos[1]-x)
                 elif inp == "right":
-                    pos = (startpos[1]+x, startpos[1])
+                    pos = (startpos[0], startpos[1]+x)
                 
                 if board.findpiece(pos):
                     print("There's already another ship that way.")
-                    break
+                    return False
                     
                 else:
-                    chosen.range.append( (startpos[0]-x, startpos[1]) )
+                    chosen.range.append(pos)
                     
-            if not conflict:
-                board.create_piece(chosen)
+            board.create_piece(chosen)
                 
     else:
         return False
@@ -124,12 +133,24 @@ destroyer2 = BattleshipPiece(
     [(0,0), (0,1)], 
     "Destroyer", 
     one )
+submarine1 = BattleshipPiece(
+    [0,0],
+    "Submarine",
+    one )
+submarine2 = BattleshipPiece(
+    [0,0],
+    "Submarine",
+    one )
 carrier = BattleshipPiece( 
     [(0,0), (0,1), (0,2), (0,3), (0,4)],
-    "Aircraft Carrier",
+    "Carrier",
     one )
-    
-ships = { 'Destroyer': [destroyer1, destroyer2], 'Carrier': [carrier] } 
+battleship = BattleshipPiece(
+    [(0,0), (0,1), (0,2), (0,3)],
+    "Battleship",
+    one )
+
+ships = { 'destroyer': [destroyer1, destroyer2], 'carrier': [carrier], 'submarine': [submarine1, submarine2], 'battleship': battleship } 
 
 inp = None
 print(board)
@@ -139,6 +160,7 @@ while inp != "x":
         print("{}x {} (size {})".format(len(ships[ship]), ship, ships[ship][0].hp))
         
     inp = input("> ")
+    inp = inp.lower()
     if inp in ships:
         try:
             chosen = ships[inp].pop()
@@ -149,9 +171,17 @@ while inp != "x":
                 if len(ships[inp]) == 0:
                     del ships[inp]
             else:
+                # put piece back if unsuccesful
                 ships[inp].append(chosen)
+                
     else:
         print("?")
+        
+    board.make_visible()
+    print(board)
+    
+    if len(ships) == 0:
+        break
             
 
     
