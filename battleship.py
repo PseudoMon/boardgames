@@ -14,7 +14,8 @@ if not -> o
 """
 
 from baseboard import Piece, Board, Player
-from baseboard import inputtopos, checkwin, swapplayer 
+from baseboard import inputtopos, checkwin, swapplayer
+from random import randint 
 
 class BattleshipBoard(Board):
     def __init__(self, pieces=[]):
@@ -41,6 +42,73 @@ class BattleshipBoard(Board):
             for mass in piece.range:
                 self.board[mass[0]][mass[1]] = "x"
                 
+    def make_invisible(self):
+        for row in range(0,self.size[0]):
+            for col in range(0,self.size[1]):
+                self.board[row][col] = "."
+                
+    def putpiece(self, chosen, auto = False, startpos=None, going=None):
+        # startpos and going None means it's player's action
+        # if the values are given, then it's automated
+        if not auto:
+            print("Where to put?")
+            inp = input("> ")
+            startpos = inputtopos(inp)
+        
+            if startpos == False:
+                return False
+            
+        if self.findpiece(startpos):
+            if not auto:
+                print("There's already another ship there.")
+            return False
+        
+        if not auto:
+            print("Extending to? (up/down/left/right)")
+            inp = input("> ")
+        else:
+            inp = going
+        
+        if inp in ("up", "down", "left", "right"):
+            chosen.range = [startpos]
+            toofar = {
+                'up': startpos[0] - (chosen.hp - 1) < 0,
+                'down': startpos[0] + (chosen.hp - 1) > self.size[0]-1,
+                'left': startpos[1] - (chosen.hp - 1) < 0,
+                'right': startpos[1] + (chosen.hp - 1) > self.size[1]-1
+                }
+            
+            if toofar[inp]:
+                if not auto:
+                    print("Dood, ye can't go that way")
+                return False
+                
+            else:
+                for x in range(1,chosen.hp):
+                    if inp == "up":
+                        pos = (startpos[0]-x, startpos[1])
+                    elif inp == "down":
+                        pos = (startpos[0]+x, startpos[1])
+                    elif inp == "left":
+                        pos = (startpos[0], startpos[1]-x)
+                    elif inp == "right":
+                        pos = (startpos[0], startpos[1]+x)
+                    
+                    if self.findpiece(pos):
+                        if not auto:
+                            print("There's already another ship that way.")
+                        return False
+                        
+                    else:
+                        chosen.range.append(pos)
+                        
+                self.create_piece(chosen)
+                    
+        else:
+            return False
+            
+        return True
+                
         
 class BattleshipPiece(Piece):
     def __init__(self, range, name, player):
@@ -64,58 +132,50 @@ class BattleshipPlayer(Player):
     def __init__(self, ord):
         Player.__init__(self, ord)
         
-def putpiece(chosen, board):
-    print("Where to put?")
-    inp = input("> ")
-    startpos = inputtopos(inp)
-    
-    if startpos == False:
-        return False
-        
-    if board.findpiece(startpos):
-        print("There's already another ship there.")
-        return False
-    
-    print("Extending to? (up/down/left/right)")
-    inp = input("> ")
-    
-    if inp in ("up", "down", "left", "right"):
-        chosen.range = [startpos]
-        toofar = {
-            'up': startpos[0] - (chosen.hp - 1) < 0,
-            'down': startpos[0] + (chosen.hp - 1) > board.size[0],
-            'left': startpos[1] - (chosen.hp - 1) < 0,
-            'right': startpos[1] + (chosen.hp - 1) > board.size[1]
-            }
-        
-        if toofar[inp]:
-            print("Dood, ye can't go that way")
-            return False
+def position_ships(ships, board):
+    inp = None
+    while inp != "x":
+        for ship in ships:
+            print("{}x {} (size {})".format(len(ships[ship]), ships[ship][0].name, ships[ship][0].hp))
             
-        else:
-            for x in range(1,chosen.hp):
-                if inp == "up":
-                    pos = (startpos[0]-x, startpos[1])
-                elif inp == "down":
-                    pos = (startpos[0]+x, startpos[1])
-                elif inp == "left":
-                    pos = (startpos[0], startpos[1]-x)
-                elif inp == "right":
-                    pos = (startpos[0], startpos[1]+x)
-                
-                if board.findpiece(pos):
-                    print("There's already another ship that way.")
-                    return False
-                    
+        inp = input("> ")
+        inp = inp.lower()
+        if inp in ships:
+            try:
+                chosen = ships[inp].pop()
+            except IndexError:
+                print("There's no more ship of that type!")
+            else:
+                if board.putpiece(chosen):
+                    if len(ships[inp]) == 0:
+                        del ships[inp]
                 else:
-                    chosen.range.append(pos)
+                    # put piece back if unsuccesful
+                    ships[inp].append(chosen)
                     
-            board.create_piece(chosen)
-                
-    else:
-        return False
+        else:
+            print("?")
+            
+        board.make_visible()
+        print(board)
         
-    return True
+        if len(ships) == 0:
+            break
+            
+def position_ships_random(ships, board):
+    for ship in ships:
+        for chosen in ships[ship]:
+            placed = False
+            while placed == False:
+                directions = {0: 'up', 1: 'down', 2: 'left', 3: 'right'}
+                startpos = (randint(0, 9), randint(0,9))
+                going = directions[randint(0,3)]
+       
+                placed = board.putpiece(chosen, True, startpos, going)
+                
+            board.make_visible()
+    print(board)
+    
         
 comp = Player(0)        
 one = Player(1)
@@ -123,7 +183,7 @@ players = [comp, one]
 comp.num_o_pieces = 1
 one.num_o_pieces = 3
 
-board = BattleshipBoard()
+yourboard = BattleshipBoard()
 
 destroyer1 = BattleshipPiece( 
     [(0,0), (0,1)], 
@@ -134,11 +194,11 @@ destroyer2 = BattleshipPiece(
     "Destroyer", 
     one )
 submarine1 = BattleshipPiece(
-    [0,0],
+    [(0,0)],
     "Submarine",
     one )
 submarine2 = BattleshipPiece(
-    [0,0],
+    [(0,0)],
     "Submarine",
     one )
 carrier = BattleshipPiece( 
@@ -149,43 +209,19 @@ battleship = BattleshipPiece(
     [(0,0), (0,1), (0,2), (0,3)],
     "Battleship",
     one )
+cruiser = BattleshipPiece(
+    [(0,0), (0,1), (0,2)],
+    "Cruiser",
+    one )
 
-ships = { 'destroyer': [destroyer1, destroyer2], 'carrier': [carrier], 'submarine': [submarine1, submarine2], 'battleship': battleship } 
+ships = { 'destroyer': [destroyer1, destroyer2], 'carrier': [carrier], 'submarine': [submarine1, submarine2], 'battleship': [battleship], 'cruiser': [cruiser] } 
 
-inp = None
-print(board)
-    
-while inp != "x":
-    for ship in ships:
-        print("{}x {} (size {})".format(len(ships[ship]), ship, ships[ship][0].hp))
-        
-    inp = input("> ")
-    inp = inp.lower()
-    if inp in ships:
-        try:
-            chosen = ships[inp].pop()
-        except IndexError:
-            print("There's no more ship of that type!")
-        else:
-            if putpiece(chosen, board):
-                if len(ships[inp]) == 0:
-                    del ships[inp]
-            else:
-                # put piece back if unsuccesful
-                ships[inp].append(chosen)
-                
-    else:
-        print("?")
-        
-    board.make_visible()
-    print(board)
-    
-    if len(ships) == 0:
-        break
-            
+print(yourboard)
+position_ships_random(ships, yourboard)
+yourboard.make_invisible()
+print(yourboard)
 
-    
-    
+
 """ Attacking test
 board.create_piece(destroyer1)
 
