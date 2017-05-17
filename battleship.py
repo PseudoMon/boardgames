@@ -16,10 +16,33 @@ if not -> o
 from baseboard import Piece, Board, Player
 from baseboard import inputtopos, checkwin, swapplayer
 from random import randint 
+from copy import deepcopy
 
 class BattleshipBoard(Board):
     def __init__(self, pieces=[]):
-        Board.__init__(self, (10, 10), pieces)
+        super(BattleshipBoard, self).__init__((10, 10), pieces)
+        self.atk_board = deepcopy(self.board)
+        
+    def stratkboard(self):
+        boardstr = " \n"
+        
+        # Header nums
+        boardstr += "  "
+        for col in range(self.size[1]):
+            boardstr += str(col)
+        boardstr += "\n"
+            
+        rownum = 0
+        
+        for row in self.atk_board:
+            boardstr += str(rownum) + " "
+            rownum += 1
+            
+            for col in row:
+                boardstr += col
+                
+            boardstr += "\n"
+        return boardstr
         
     def create_piece(self, piece):
         # Overloading the default, simply because Battleship doesn't use the typical row-col positioning
@@ -37,10 +60,10 @@ class BattleshipBoard(Board):
         if nopiece:
             return False
             
-    def make_visible(self):
+    def make_visible(self, atk_board=False):
         for piece in self.pieces:
             for mass in piece.range:
-                self.board[mass[0]][mass[1]] = "x"
+                self.board[mass[0]][mass[1]] = "o"
                 
     def make_invisible(self):
         for row in range(0,self.size[0]):
@@ -49,7 +72,7 @@ class BattleshipBoard(Board):
                 
     def set_piece(self, chosen, auto = False, startpos=None, going=None):
         # Overloading the default, Battleship piece-setting
-        # is a bit more complicated
+        # is a bit more complicated 
         if not auto:
             print("Where to put?")
             inp = input("> ")
@@ -166,16 +189,45 @@ class Cruiser(BattleshipPiece):
 class BattleshipPlayer(Player):
     def __init__(self, ord):
         Player.__init__(self, ord)
+        board = None
+        
+    def setup_board(self, randompos=True):
+        self.num_o_pieces = 7
+        self.board = BattleshipBoard([])
+        # I've no idea, but not setting empty list here will fuck up everything
+        
+        destroyer1 = Destroyer(self)
+        destroyer2 = Destroyer(self)
+        submarine1 = Submarine(self)
+        submarine2 = Submarine(self)
+        carrier = Carrier(self)
+        battleship = Battleshipship(self)
+        cruiser = Cruiser(self)
+        
+        ships = { 'destroyer': [destroyer1, destroyer2], 'carrier': [carrier], 'submarine': [submarine1, submarine2], 'battleship': [battleship], 'cruiser': [cruiser] } 
+        
+        if randompos:
+            position_ships_random(ships, self.board)
+        else:
+            position_ships(ships, self.board)
+        
+        self.board.make_visible()
         
 
 def position_ships(ships, board):
     inp = None
-    while inp != "x":
+    print(board)
+    while True:
+        print("These are the ships you can position:")
         for ship in ships:
             print("{}x {} (size {})".format(len(ships[ship]), ships[ship][0].name, ships[ship][0].hp))
             
         inp = input("> ")
         inp = inp.lower()
+        
+        if inp == "x" or inp == "exit":
+            exit()
+        
         if inp in ships:
             try:
                 chosen = ships[inp].pop()
@@ -213,62 +265,98 @@ def position_ships_random(ships, board):
     #print(board)
     
 def attack_prompt(oppboard, cur_player):
-    print("It's now {}'s turn".format(cur_player))
+    print("It's now Player {}'s turn".format(cur_player))
     done = False
     while not done:
-        print("Check which tile?")
+        pos = None
+        print("Address of position to attack?")
         inp = input("> ")
         
         if inp == "x" or inp == "exit":
             exit()
             
-        pos = inputtopos(inp)
+        elif inp == "check my ships":
+            print(cur_player.board)
+            
+        elif inp == "check attack grid":
+            print(oppboard.stratkboard())
+            
+        elif inp == "help":
+            printhelp()
+            
+        else:
+            pos = inputtopos(inp)
         
         if pos:
-            if oppboard.board[pos[0]][pos[1]] != ".":
+            if oppboard.atk_board[pos[0]][pos[1]] != ".":
                 print("You've already checked that tile!")
                 
             else:
                 hit = oppboard.findpiece(pos)
                 
                 if not hit:
-                    oppboard.board[pos[0]][pos[1]] = "o"
+                    oppboard.atk_board[pos[0]][pos[1]] = "o"
+                    oppboard.board[pos[0]][pos[1]] = "x"
                     
                 else:
                     print("You hit something!")
                     hit.attacked()
-                    oppboard.board[pos[0]][pos[1]] = "x"
+                    oppboard.atk_board[pos[0]][pos[1]] = "x"
+                    oppboard.board[pos[0]][pos[1]] = "A"
                     
                 done = True
+                
+def printhelp():
+    print("\nHelp\nDo not look at another player's turn!")
+    print("\nType in the address of the location you'd like to attack.")
+    print("Ex: [09] will attack the topmost-rightmost tile.")
+    print("\nType [check my ships] to see the position of your ships. (Do not let the other player see this)")
+    print("\nType [check attack grid] to see your attack grid again.")
+    print("\nIn your ship's grid, [o] is your ship, [x] is where our opponent has ataccked. [A] is the part of your ship that's damaged.")
+    print("In your attack grid, [o] is where you missed, [x] is where you got a hit.")
+    print("\nType [x] or [exit] to exit the game.")
+    print("")
+    return
     
+
         
-comp = Player(0)        
-one = Player(1)
-players = [comp, one]
-comp.num_o_pieces = 7
-one.num_o_pieces = 99
+one = BattleshipPlayer(1)        
+two = BattleshipPlayer(2)
+players = [one, two]
 
-compboard = BattleshipBoard()
+print("Welcome to Battleship")
+print("This game should be played alternatively by two players.")
+print("Type [help] for instructions.")
 
-destroyer1 = Destroyer(comp)
-destroyer2 = Destroyer(comp)
-submarine1 = Submarine(comp)
-submarine2 = Submarine(comp)
-carrier = Carrier(comp)
-battleship = Battleshipship(comp)
-cruiser = Cruiser(comp)
+print("\nPlayer2: Don't look! \nPlayer 1! \nWould you like to randomly position your ships?")
+inp = input("y/n > ")
 
-ships = { 'destroyer': [destroyer1, destroyer2], 'carrier': [carrier], 'submarine': [submarine1, submarine2], 'battleship': [battleship], 'cruiser': [cruiser] } 
+if inp.lower() == "y":
+    one.setup_board(True)
+else:
+    one.setup_board(False)
+    
+print("Player 1: Don't look! \nPlayer 2! \nWould you like to randomly position your ships?")
+inp = input("y/n >")
 
-print(compboard)
-position_ships_random(ships, compboard)
+if inp.lower() == "y":
+    two.setup_board(True)
+else:
+    one.setup_board(False)
 
+print("\nBeginning game!")
 
-""" Attacking test """
-cur_player = 1
 while True:
-    attack_prompt(compboard, cur_player)
-    print(compboard)
+    cur_player = one
+    print(two.board.stratkboard())
+    attack_prompt(two.board, cur_player)
+    print(two.board.stratkboard())
+    
+    cur_player = two
+    print(one.board.stratkboard())
+    attack_prompt(one.board, cur_player)
+    print(one.board.stratkboard())
+    
     winner = checkwin(players)
     if winner:
         break
