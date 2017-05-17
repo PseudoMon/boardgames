@@ -63,7 +63,7 @@ class BattleshipBoard(Board):
     def make_visible(self, atk_board=False):
         for piece in self.pieces:
             for mass in piece.range:
-                self.board[mass[0]][mass[1]] = "o"
+                self.board[mass[0]][mass[1]] = "x"
                 
     def make_invisible(self):
         for row in range(0,self.size[0]):
@@ -194,7 +194,7 @@ class BattleshipPlayer(Player):
     def setup_board(self, randompos=True):
         self.num_o_pieces = 7
         self.board = BattleshipBoard([])
-        # I've no idea, but not setting empty list here will fuck up everything
+        # I've no idea why, but not setting empty list here will fuck up everything
         
         destroyer1 = Destroyer(self)
         destroyer2 = Destroyer(self)
@@ -260,9 +260,7 @@ def position_ships_random(ships, board):
                 going = directions[randint(0,3)]
        
                 placed = board.set_piece(chosen, True, startpos, going)
-                
-    #board.make_visible()
-    #print(board)
+
     
 def attack_prompt(oppboard, cur_player):
     print("It's now Player {}'s turn".format(cur_player))
@@ -296,7 +294,7 @@ def attack_prompt(oppboard, cur_player):
                 
                 if not hit:
                     oppboard.atk_board[pos[0]][pos[1]] = "o"
-                    oppboard.board[pos[0]][pos[1]] = "x"
+                    oppboard.board[pos[0]][pos[1]] = "o"
                     
                 else:
                     print("You hit something!")
@@ -305,6 +303,28 @@ def attack_prompt(oppboard, cur_player):
                     oppboard.board[pos[0]][pos[1]] = "A"
                     
                 done = True
+
+def random_attack(oppboard):
+    done = False
+
+    while not done:
+        pos = (randint(0, 9), randint(0,9))
+        if oppboard.atk_board[pos[0]][pos[1]] != ".":
+                pass
+        else:
+            hit = oppboard.findpiece(pos)
+            if not hit:
+                print("The computer hits nothing!")
+                oppboard.atk_board[pos[0]][pos[1]] = "o"
+                oppboard.board[pos[0]][pos[1]] = "o"
+                
+            else:
+                print("The computer hits something!")
+                hit.attacked()
+                oppboard.atk_board[pos[0]][pos[1]] = "x"
+                oppboard.board[pos[0]][pos[1]] = "A"
+               
+            done = True
                 
 def printhelp():
     print("\nHelp\nDo not look at another player's turn!")
@@ -312,7 +332,7 @@ def printhelp():
     print("Ex: [09] will attack the topmost-rightmost tile.")
     print("\nType [check my ships] to see the position of your ships. (Do not let the other player see this)")
     print("\nType [check attack grid] to see your attack grid again.")
-    print("\nIn your ship's grid, [o] is your ship, [x] is where our opponent has ataccked. [A] is the part of your ship that's damaged.")
+    print("\nIn your ship's grid, [x] is your ship, [o] is where your opponent has ataccked and missed. [A] is the part of your ship that's damaged.")
     print("In your attack grid, [o] is where you missed, [x] is where you got a hit.")
     print("\nType [x] or [exit] to exit the game.")
     print("")
@@ -323,47 +343,70 @@ def printhelp():
 one = BattleshipPlayer(1)        
 two = BattleshipPlayer(2)
 players = [one, two]
+twoiscomp = False
 
 print("Welcome to Battleship")
 print("This game should be played alternatively by two players.")
 print("Type [help] for instructions.")
 
-print("\nPlayer2: Don't look! \nPlayer 1! \nWould you like to randomly position your ships?")
+print("Versus [player] or [comp]uter?")
+while True:
+    inp = input("player/comp > ")
+    if inp == "comp":
+        twoiscomp = True
+        break
+    elif inp == "player":
+        break
+        
+if not twoiscomp:
+    print("\nPlayer 2, don't look!\n")
+print("Player 1! \nWould you like to position your ships yourself? (Random otherwisse)")
 inp = input("y/n > ")
 
 if inp.lower() == "y":
+    one.setup_board(False)
+else:
     one.setup_board(True)
-else:
-    one.setup_board(False)
     
-print("Player 1: Don't look! \nPlayer 2! \nWould you like to randomly position your ships?")
-inp = input("y/n >")
+if not twoiscomp:
+    print("\nPlayer 1, don't look!\n")
+    print("Player 2! \nWould you like to position your ships yourself? (Random otherwise)")
+    inp = input("y/n >")
 
-if inp.lower() == "y":
-    two.setup_board(True)
+    if inp.lower() == "y":
+        two.setup_board(False)
+    else:
+        two.setup_board(True)
 else:
-    one.setup_board(False)
+    two.setup_board()
 
 print("\nBeginning game!")
 
 while True:
-    cur_player = one
+    # One's turn
     print(two.board.stratkboard())
-    attack_prompt(two.board, cur_player)
-    print(two.board.stratkboard())
-    
-    cur_player = two
-    print(one.board.stratkboard())
-    attack_prompt(one.board, cur_player)
-    print(one.board.stratkboard())
+    attack_prompt(two.board, one)
+    #print(two.board.stratkboard())
     
     winner = checkwin(players)
     if winner:
         break
     
-print(compboard)
-print("Player wins!")
-
-
-
-
+    # Two's turn
+    if twoiscomp:
+        print("\nComputer is attacking...")
+        random_attack(one.board)
+    else:
+        print(one.board.stratkboard())
+        attack_prompt(one.board, two)
+        print(one.board.stratkboard())
+    
+    winner = checkwin(players)
+    if winner:
+        break
+    
+print("Player one's board:")
+print(one.board)
+print("Player two's board:")
+print(two.board)
+print("Player {} wins!".format(winner))
